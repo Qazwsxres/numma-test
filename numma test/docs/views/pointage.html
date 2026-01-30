@@ -1,0 +1,253 @@
+<!-- ========================================
+     POINTAGE VIEW
+     Employee time tracking
+     ======================================== -->
+
+<div class="pointage-container">
+    <!-- Clock Widget -->
+    <div class="card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-align: center;">
+        <div style="font-size: 3rem; font-weight: 700; margin-bottom: 0.5rem;" id="clockTime">
+            00:00:00
+        </div>
+        <div style="font-size: 1.25rem; opacity: 0.9; margin-bottom: 2rem;" id="clockDate">
+            --
+        </div>
+        
+        <button class="btn" 
+                id="clockButton" 
+                onclick="handleClockAction()"
+                style="background: white; color: #667eea; font-size: 1.125rem; padding: 1rem 2.5rem; font-weight: 600;">
+            🕐 Pointer
+        </button>
+        
+        <div id="pendingAlert" style="margin-top: 1.5rem; display: none;">
+            <div style="background: rgba(255, 255, 255, 0.2); padding: 0.75rem; border-radius: 8px; font-size: 0.875rem;">
+                ⚠️ <span id="pendingCount">0</span> pointage(s) en attente de synchronisation
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-grid" style="grid-template-columns: repeat(3, 1fr);">
+        <div class="stat-card">
+            <div class="stat-label">Heures ce mois</div>
+            <div class="stat-value" id="statHours">0h 00m</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Jours travaillés</div>
+            <div class="stat-value" id="statDays">0</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Moyenne / jour</div>
+            <div class="stat-value" id="statAvg">0h 00m</div>
+        </div>
+    </div>
+
+    <!-- History -->
+    <div class="card">
+        <div class="card-header">
+            <div class="card-title">Historique des pointages</div>
+            <button class="btn btn-outline" onclick="refreshPointageHistory()">
+                🔄 Actualiser
+            </button>
+        </div>
+        
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Heure d'entrée</th>
+                    <th>Heure de sortie</th>
+                    <th>Durée</th>
+                    <th>Statut</th>
+                </tr>
+            </thead>
+            <tbody id="pointageHistoryTableBody">
+                <tr>
+                    <td colspan="5" style="text-align: center; padding: 2rem;">
+                        Chargement de l'historique...
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+console.log('⏰ Pointage view loaded');
+
+let clockInterval = null;
+let isCurrentlyClockedIn = false;
+
+function updateLiveClock() {
+    const now = new Date();
+    
+    document.getElementById('clockTime').textContent = now.toLocaleTimeString('fr-FR');
+    document.getElementById('clockDate').textContent = now.toLocaleDateString('fr-FR', {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric'
+    });
+}
+
+async function handleClockAction() {
+    const button = document.getElementById('clockButton');
+    button.disabled = true;
+    
+    try {
+        if (isCurrentlyClockedIn) {
+            await window.PointageAPI.clockOut();
+            button.textContent = '🕐 Pointer (Entrée)';
+            button.style.background = 'white';
+            button.style.color = '#667eea';
+            isCurrentlyClockedIn = false;
+        } else {
+            await window.PointageAPI.clockIn();
+            button.textContent = '🕐 Pointer (Sortie)';
+            button.style.background = '#ef4444';
+            button.style.color = 'white';
+            isCurrentlyClockedIn = true;
+        }
+        
+        await updateClockHistoryTable();
+        await updateClockStats();
+        updatePendingAlert();
+        
+    } catch (error) {
+        console.error('Clock action failed:', error);
+    } finally {
+        button.disabled = false;
+    }
+}
+
+async function updateClockHistoryTable() {
+    const tbody = document.getElementById('pointageHistoryTableBody');
+    
+    try {
+        const history = await window.PointageAPI.getHistory();
+        
+        if (!history || history.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="5" style="text-align: center; padding: 2rem; color: var(--text-gray);">
+                        Aucun pointage enregistré
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+        
+        tbody.innerHTML = history.slice(0, 30).map(record => {
+            const clockIn = record.clock_in ? new Date(record.clock_in) : null;
+            const clockOut = record.clock_out ? new Date(record.clock_out) : null;
+            
+            let duration = '-';
+            if (clockIn && clockOut) {
+                const diff = clockOut - clockIn;
+                const hours = Math.floor(diff / 3600000);
+                const minutes = Math.floor((diff % 3600000) / 60000);
+                duration = `${hours}h ${String(minutes).padStart(2, '0')}m`;
+            }
+            
+            return `
+                <tr>
+                    <td>${formatDate(record.date || record.clock_in)}</td>
+                    <td>${clockIn ? clockIn.toLocaleTimeString('fr-FR') : '-'}</td>
+                    <td>${clockOut ? clockOut.toLocaleTimeString('fr-FR') : '-'}</td>
+                    <td>${duration}</td>
+                    <td>
+                        ${clockOut ? createBadge('Complet', 'success') : createBadge('En cours', 'warning')}
+                    </td>
+                </tr>
+            `;
+        }).join('');
+        
+    } catch (error) {
+        console.error('History loading failed:', error);
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="5" style="text-align: center; padding: 2rem; color: var(--danger);">
+                    Erreur de chargement de l'historique
+                </td>
+            </tr>
+        `;
+    }
+}
+
+async function updateClockStats() {
+    try {
+        const now = new Date();
+        const stats = await window.PointageAPI.getStatistics(now.getMonth() + 1, now.getFullYear());
+        
+        const totalHours = stats.total_hours || 0;
+        const hours = Math.floor(totalHours);
+        const minutes = Math.floor((totalHours % 1) * 60);
+        
+        const avgHours = stats.average_hours_per_day || 0;
+        const avgH = Math.floor(avgHours);
+        const avgM = Math.floor((avgHours % 1) * 60);
+        
+        document.getElementById('statHours').textContent = `${hours}h ${String(minutes).padStart(2, '0')}m`;
+        document.getElementById('statDays').textContent = stats.days_worked || 0;
+        document.getElementById('statAvg').textContent = `${avgH}h ${String(avgM).padStart(2, '0')}m`;
+        
+    } catch (error) {
+        console.error('Stats loading failed:', error);
+    }
+}
+
+function updatePendingAlert() {
+    const count = window.PointageAPI.getPendingCount();
+    const alert = document.getElementById('pendingAlert');
+    
+    if (count > 0) {
+        document.getElementById('pendingCount').textContent = count;
+        alert.style.display = 'block';
+    } else {
+        alert.style.display = 'none';
+    }
+}
+
+async function checkCurrentSession() {
+    try {
+        const session = await window.PointageAPI.getCurrentSession();
+        const button = document.getElementById('clockButton');
+        
+        if (session && session.id && !session.clock_out) {
+            isCurrentlyClockedIn = true;
+            button.textContent = '🕐 Pointer (Sortie)';
+            button.style.background = '#ef4444';
+            button.style.color = 'white';
+        } else {
+            isCurrentlyClockedIn = false;
+            button.textContent = '🕐 Pointer (Entrée)';
+            button.style.background = 'white';
+            button.style.color = '#667eea';
+        }
+    } catch (error) {
+        console.error('Session check failed:', error);
+    }
+}
+
+async function refreshPointageHistory() {
+    await updateClockHistoryTable();
+    await updateClockStats();
+    showSuccess('Historique actualisé');
+}
+
+// Start live clock
+clockInterval = setInterval(updateLiveClock, 1000);
+updateLiveClock();
+
+// Initialize
+checkCurrentSession();
+updateClockHistoryTable();
+updateClockStats();
+updatePendingAlert();
+
+// Update pending alert every 10 seconds
+setInterval(updatePendingAlert, 10000);
+
+console.log('✅ Pointage initialized');
+</script>

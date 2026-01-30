@@ -1,0 +1,244 @@
+<!-- ========================================
+     TRESORERIE VIEW
+     Cash flow management
+     ======================================== -->
+
+<div class="tresorerie-container">
+    <!-- Stats -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-label">Solde actuel</div>
+            <div class="stat-value" id="statBalance">€ 0</div>
+            <div class="stat-change" id="statBalanceChange">--</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Entrées ce mois</div>
+            <div class="stat-value positive" id="statInflow">€ 0</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Sorties ce mois</div>
+            <div class="stat-value negative" id="statOutflow">€ 0</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Variation nette</div>
+            <div class="stat-value" id="statNet">€ 0</div>
+        </div>
+    </div>
+
+    <!-- Chart -->
+    <div class="card">
+        <div class="card-header">
+            <div class="card-title">Évolution de la trésorerie</div>
+            <select id="chartPeriod" class="form-select" style="width: auto;" onchange="updateCashflowChart()">
+                <option value="30">30 jours</option>
+                <option value="90">90 jours</option>
+                <option value="365">1 an</option>
+            </select>
+        </div>
+        <canvas id="cashflowChart" style="max-height: 300px;"></canvas>
+    </div>
+
+    <!-- Recent Transactions -->
+    <div class="card">
+        <div class="card-header">
+            <div class="card-title">Dernières transactions</div>
+            <button class="btn btn-primary" onclick="openAddTransactionModal()">
+                ➕ Transaction
+            </button>
+        </div>
+        
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Description</th>
+                    <th>Catégorie</th>
+                    <th>Montant</th>
+                    <th>Solde</th>
+                </tr>
+            </thead>
+            <tbody id="transactionsTableBody">
+                <tr>
+                    <td colspan="5" style="text-align: center; padding: 2rem;">
+                        Chargement...
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+console.log('💰 Trésorerie view loaded');
+
+let cashflowChart = null;
+
+async function loadCashflowData() {
+    try {
+        await Promise.all([
+            updateCashflowStats(),
+            updateCashflowChart(),
+            loadTransactions()
+        ]);
+        console.log('✅ Cashflow data loaded');
+    } catch (error) {
+        console.error('❌ Cashflow loading failed:', error);
+        showError('Erreur de chargement');
+    }
+}
+
+async function updateCashflowStats() {
+    try {
+        const token = getSecureToken();
+        const response = await fetch('https://optimis-fiscale-production.up.railway.app/api/cashflow/stats', {
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            credentials: 'include'
+        });
+
+        if (!response.ok) throw new Error('Stats failed');
+        
+        const stats = await response.json();
+        
+        document.getElementById('statBalance').textContent = formatCurrency(stats.current_balance || 0);
+        document.getElementById('statInflow').textContent = formatCurrency(stats.monthly_inflow || 0);
+        document.getElementById('statOutflow').textContent = formatCurrency(stats.monthly_outflow || 0);
+        document.getElementById('statNet').textContent = formatCurrency((stats.monthly_inflow || 0) - (stats.monthly_outflow || 0));
+        
+        const change = stats.balance_change || 0;
+        document.getElementById('statBalanceChange').textContent = `${change >= 0 ? '+' : ''}${change.toFixed(1)}%`;
+        document.getElementById('statBalanceChange').className = `stat-change ${change >= 0 ? 'positive' : 'negative'}`;
+        
+    } catch (error) {
+        console.error('Stats failed:', error);
+    }
+}
+
+function initCashflowChart() {
+    updateCashflowChart();
+}
+
+async function updateCashflowChart() {
+    const canvas = document.getElementById('cashflowChart');
+    if (!canvas) return;
+    
+    const ctx = canvas.getContext('2d');
+    const period = document.getElementById('chartPeriod').value;
+    
+    try {
+        const token = getSecureToken();
+        const response = await fetch(`https://optimis-fiscale-production.up.railway.app/api/cashflow/chart?period=${period}`, {
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            credentials: 'include'
+        });
+
+        if (!response.ok) throw new Error('Chart failed');
+        
+        const data = await response.json();
+        
+        if (cashflowChart) {
+            cashflowChart.destroy();
+        }
+        
+        cashflowChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: data.labels || [],
+                datasets: [{
+                    label: 'Solde',
+                    data: data.values || [],
+                    borderColor: '#10b981',
+                    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                    tension: 0.4,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    y: {
+                        ticks: {
+                            callback: (value) => formatCurrency(value)
+                        }
+                    }
+                }
+            }
+        });
+        
+    } catch (error) {
+        console.error('Chart failed:', error);
+    }
+}
+
+async function loadTransactions() {
+    const tbody = document.getElementById('transactionsTableBody');
+    
+    try {
+        const token = getSecureToken();
+        const response = await fetch('https://optimis-fiscale-production.up.railway.app/api/transactions?limit=50', {
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            credentials: 'include'
+        });
+
+        if (!response.ok) throw new Error('Transactions failed');
+        
+        const transactions = await response.json();
+        
+        if (!transactions || transactions.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="5" style="text-align: center; padding: 2rem; color: var(--text-gray);">
+                        Aucune transaction
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+        
+        tbody.innerHTML = transactions.map(tx => {
+            const amount = parseFloat(tx.amount || 0);
+            const isPositive = amount >= 0;
+            
+            return `
+                <tr>
+                    <td>${formatDate(tx.date)}</td>
+                    <td>${escapeHtml(tx.description || '-')}</td>
+                    <td>${createBadge(tx.category || 'Autre', 'info')}</td>
+                    <td style="text-align: right; color: ${isPositive ? 'var(--success)' : 'var(--danger)'}; font-weight: 600;">
+                        ${isPositive ? '+' : ''}${formatCurrency(amount)}
+                    </td>
+                    <td style="text-align: right;">${formatCurrency(tx.balance || 0)}</td>
+                </tr>
+            `;
+        }).join('');
+        
+    } catch (error) {
+        console.error('Transactions failed:', error);
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="5" style="text-align: center; padding: 2rem; color: var(--danger);">
+                    Erreur de chargement
+                </td>
+            </tr>
+        `;
+    }
+}
+
+function openAddTransactionModal() {
+    showInfo('Fonctionnalité en développement');
+}
+
+loadCashflowData();
+</script>
