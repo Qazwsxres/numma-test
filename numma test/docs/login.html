@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NUMMA - Connexion</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1d4ed8;
+            --primary-light: #3b82f6;
+            --bg-gradient-1: #667eea;
+            --bg-gradient-2: #764ba2;
+            --text-dark: #1e293b;
+            --text-light: #64748b;
+            --white: #ffffff;
+            --success: #10b981;
+            --error: #ef4444;
+        }
+
+        body {
+            font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, var(--bg-gradient-1) 0%, var(--bg-gradient-2) 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1.5rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        body::before,
+        body::after {
+            content: '';
+            position: absolute;
+            border-radius: 50%;
+            opacity: 0.1;
+            animation: float 20s ease-in-out infinite;
+        }
+
+        body::before {
+            width: 600px;
+            height: 600px;
+            background: var(--white);
+            top: -300px;
+            left: -200px;
+        }
+
+        body::after {
+            width: 400px;
+            height: 400px;
+            background: var(--white);
+            bottom: -200px;
+            right: -100px;
+            animation-delay: -10s;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            33% { transform: translate(30px, -30px) scale(1.1); }
+            66% { transform: translate(-20px, 20px) scale(0.9); }
+        }
+
+        .login-container {
+            background: rgba(255, 255, 255, 0.98);
+            backdrop-filter: blur(10px);
+            border-radius: 24px;
+            box-shadow: 
+                0 20px 60px rgba(0, 0, 0, 0.2),
+                0 0 0 1px rgba(255, 255, 255, 0.5) inset;
+            max-width: 460px;
+            width: 100%;
+            position: relative;
+            z-index: 1;
+            animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .login-header {
+            padding: 3rem 2.5rem 2rem;
+            text-align: center;
+            position: relative;
+        }
+
+        .logo {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 72px;
+            height: 72px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+            border-radius: 20px;
+            margin-bottom: 1.5rem;
+            position: relative;
+            box-shadow: 
+                0 10px 30px rgba(37, 99, 235, 0.3),
+                0 0 0 4px rgba(37, 99, 235, 0.1);
+            animation: logoPulse 3s ease-in-out infinite;
+        }
+
+        @keyframes logoPulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        .logo-text {
+            font-size: 2rem;
+            font-weight: 800;
+            color: var(--white);
+            letter-spacing: -0.02em;
+        }
+
+        h1 {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--text-dark);
+            margin-bottom: 0.5rem;
+            letter-spacing: -0.02em;
+        }
+
+        .subtitle {
+            font-size: 0.95rem;
+            color: var(--text-light);
+            font-weight: 400;
+            line-height: 1.5;
+        }
+
+        .login-content {
+            padding: 0 2.5rem 3rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            font-size: 0.875rem;
+            color: var(--text-dark);
+            letter-spacing: 0.01em;
+        }
+
+        .input-wrapper {
+            position: relative;
+        }
+
+        input {
+            width: 100%;
+            padding: 0.875rem 1rem;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-family: 'Outfit', sans-serif;
+            color: var(--text-dark);
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            background: var(--white);
+        }
+
+        input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 
+                0 0 0 4px rgba(37, 99, 235, 0.1),
+                0 4px 12px rgba(37, 99, 235, 0.15);
+            transform: translateY(-1px);
+        }
+
+        input::placeholder {
+            color: #cbd5e1;
+        }
+
+        input.error {
+            border-color: var(--error);
+        }
+
+        .input-icon {
+            position: absolute;
+            right: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 1.25rem;
+            opacity: 0.3;
+            pointer-events: none;
+        }
+
+        .error-message {
+            display: none;
+            color: var(--error);
+            font-size: 0.875rem;
+            margin-top: 0.5rem;
+            animation: shake 0.3s;
+        }
+
+        .error-message.show {
+            display: block;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            75% { transform: translateX(10px); }
+        }
+
+        button {
+            width: 100%;
+            padding: 1rem;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+            color: var(--white);
+            border: none;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 700;
+            font-family: 'Outfit', sans-serif;
+            cursor: pointer;
+            margin-top: 0.5rem;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            box-shadow: 
+                0 4px 12px rgba(37, 99, 235, 0.3),
+                0 0 0 0 rgba(37, 99, 235, 0.5) inset;
+            position: relative;
+            overflow: hidden;
+        }
+
+        button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary) 100%);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        button:hover::before {
+            opacity: 1;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 
+                0 8px 20px rgba(37, 99, 235, 0.4),
+                0 0 0 0 rgba(37, 99, 235, 0.5) inset;
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        button span {
+            position: relative;
+            z-index: 1;
+        }
+
+        .login-footer {
+            text-align: center;
+            padding: 2rem 2.5rem 2.5rem;
+            border-top: 1px solid #f1f5f9;
+            background: #fafbfc;
+            border-radius: 0 0 24px 24px;
+        }
+
+        .footer-text {
+            font-size: 0.875rem;
+            color: var(--text-light);
+            line-height: 1.6;
+        }
+
+        .footer-text a {
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: 600;
+            transition: color 0.3s;
+        }
+
+        .footer-text a:hover {
+            color: var(--primary-dark);
+        }
+
+        .divider {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin: 2rem 0 1.5rem;
+            color: var(--text-light);
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+
+        .divider::before,
+        .divider::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: #e2e8f0;
+        }
+
+        .loading {
+            pointer-events: none;
+            opacity: 0.7;
+        }
+
+        .loading button::after {
+            content: '';
+            position: absolute;
+            width: 16px;
+            height: 16px;
+            top: 50%;
+            left: 50%;
+            margin-left: -8px;
+            margin-top: -8px;
+            border: 2px solid var(--white);
+            border-radius: 50%;
+            border-top-color: transparent;
+            animation: spin 0.6s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .rate-limit-message {
+            background: #fef2f2;
+            border: 1px solid #fee2e2;
+            color: #991b1b;
+            padding: 1rem;
+            border-radius: 12px;
+            margin-bottom: 1.5rem;
+            display: none;
+            font-size: 0.875rem;
+        }
+
+        .rate-limit-message.show {
+            display: block;
+        }
+
+        @media (max-width: 480px) {
+            .login-container {
+                border-radius: 20px;
+            }
+            
+            .login-header {
+                padding: 2.5rem 2rem 1.5rem;
+            }
+            
+            .login-content {
+                padding: 0 2rem 2.5rem;
+            }
+            
+            h1 {
+                font-size: 1.75rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-header">
+            <div class="logo">
+                <div class="logo-text">N</div>
+            </div>
+            <h1>Bienvenue sur NUMMA</h1>
+            <p class="subtitle">Gestion financière et fiscale simplifiée pour votre entreprise</p>
+        </div>
+
+        <div class="login-content">
+            <div class="rate-limit-message" id="rateLimitMessage">
+                Trop de tentatives de connexion. Veuillez patienter <span id="rateLimitCountdown">60</span> secondes.
+            </div>
+
+            <form id="loginForm">
+                <div class="form-group">
+                    <label for="loginCompanyId">Identifiant</label>
+                    <div class="input-wrapper">
+                        <input 
+                            type="text" 
+                            id="loginCompanyId" 
+                            placeholder="Votre identifiant entreprise"
+                            autocomplete="username"
+                            required
+                            aria-required="true"
+                            aria-describedby="usernameError">
+                        <span class="input-icon">👤</span>
+                    </div>
+                    <div class="error-message" id="usernameError"></div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="loginPassword">Mot de passe</label>
+                    <div class="input-wrapper">
+                        <input 
+                            type="password" 
+                            id="loginPassword" 
+                            placeholder="••••••••••"
+                            autocomplete="current-password"
+                            required
+                            aria-required="true"
+                            aria-describedby="passwordError">
+                        <span class="input-icon">🔒</span>
+                    </div>
+                    <div class="error-message" id="passwordError"></div>
+                </div>
+                
+                <button type="submit" id="loginButton">
+                    <span>Se connecter</span>
+                </button>
+            </form>
+
+            <div class="divider">Mode démo disponible</div>
+        </div>
+
+        <div class="login-footer">
+            <p class="footer-text">
+                Besoin d'aide ? Contactez-nous<br>
+                <a href="mailto:contact@numma.fr">contact@numma.fr</a> · 01 23 45 67 89
+            </p>
+            <p class="footer-text" style="margin-top: 1rem; opacity: 0.7; font-size: 0.8125rem;">
+                © 2024 NUMMA. Tous droits réservés.
+            </p>
+        </div>
+    </div>
+
+    <!-- Load security utilities FIRST -->
+    <script src="utils/security.js"></script>
+
+    <script>
+        console.log('=== NUMMA Login v3.1 (Secure) ===');
+
+        // =====================================================
+        // CONFIGURATION
+        // =====================================================
+
+        const CONFIG = {
+            API_BASE: 'https://optimis-fiscale-production.up.railway.app',
+            MAX_LOGIN_ATTEMPTS: 5,
+            RATE_LIMIT_WINDOW: 60000, // 1 minute
+            DEMO_MODE_ENABLED: true // Set to false in production
+        };
+
+        // =====================================================
+        // RATE LIMITING
+        // =====================================================
+
+        const rateLimiter = new RateLimiter(
+            CONFIG.MAX_LOGIN_ATTEMPTS, 
+            CONFIG.RATE_LIMIT_WINDOW
+        );
+
+        let rateLimitTimeout = null;
+
+        function showRateLimitMessage(secondsRemaining) {
+            const message = document.getElementById('rateLimitMessage');
+            const countdown = document.getElementById('rateLimitCountdown');
+            
+            message.classList.add('show');
+            countdown.textContent = secondsRemaining;
+            
+            document.getElementById('loginButton').disabled = true;
+            
+            rateLimitTimeout = setInterval(() => {
+                secondsRemaining--;
+                countdown.textContent = secondsRemaining;
+                
+                if (secondsRemaining <= 0) {
+                    clearInterval(rateLimitTimeout);
+                    message.classList.remove('show');
+                    document.getElementById('loginButton').disabled = false;
+                    rateLimiter.reset();
+                }
+            }, 1000);
+        }
+
+        // =====================================================
+        // VALIDATION
+        // =====================================================
+
+        function validateForm() {
+            const username = document.getElementById('loginCompanyId');
+            const password = document.getElementById('loginPassword');
+            const usernameError = document.getElementById('usernameError');
+            const passwordError = document.getElementById('passwordError');
+            
+            let isValid = true;
+            
+            // Reset errors
+            username.classList.remove('error');
+            password.classList.remove('error');
+            usernameError.classList.remove('show');
+            passwordError.classList.remove('show');
+            
+            // Validate username
+            if (!username.value.trim()) {
+                username.classList.add('error');
+                usernameError.textContent = 'L\'identifiant est requis';
+                usernameError.classList.add('show');
+                isValid = false;
+            } else if (username.value.length < 3) {
+                username.classList.add('error');
+                usernameError.textContent = 'L\'identifiant doit contenir au moins 3 caractères';
+                usernameError.classList.add('show');
+                isValid = false;
+            }
+            
+            // Validate password
+            if (!password.value) {
+                password.classList.add('error');
+                passwordError.textContent = 'Le mot de passe est requis';
+                passwordError.classList.add('show');
+                isValid = false;
+            } else if (password.value.length < 6) {
+                password.classList.add('error');
+                passwordError.textContent = 'Le mot de passe doit contenir au moins 6 caractères';
+                passwordError.classList.add('show');
+                isValid = false;
+            }
+            
+            return isValid;
+        }
+
+        // =====================================================
+        // AUTHENTICATION
+        // =====================================================
+
+        async function handleLogin(e) {
+            console.log('=== LOGIN ATTEMPT ===');
+            e.preventDefault();
+            
+            // Check rate limit
+            if (!rateLimiter.canCall()) {
+                console.warn('⚠️ Rate limit exceeded');
+                showRateLimitMessage(60);
+                return;
+            }
+            
+            // Validate form
+            if (!validateForm()) {
+                console.warn('⚠️ Validation failed');
+                return;
+            }
+            
+            const form = e.target;
+            const button = document.getElementById('loginButton');
+            const companyId = sanitizeInput(document.getElementById('loginCompanyId').value);
+            const password = document.getElementById('loginPassword').value;
+            
+            // Add loading state
+            form.classList.add('loading');
+            button.disabled = true;
+
+            try {
+                // DEMO MODE (remove in production)
+                if (CONFIG.DEMO_MODE_ENABLED && 
+                    companyId.toLowerCase() === 'demo' && 
+                    password === 'demo123') {
+                    
+                    console.log('✅ DEMO MODE LOGIN');
+                    
+                    const demoUser = {
+                        company_id: 'demo',
+                        company_name: 'Entreprise Demo',
+                        contact_name: 'Utilisateur Demo',
+                        siret: '12345678900012',
+                        email: 'demo@numma.fr',
+                        accessLevel: 'admin'
+                    };
+                    
+                    // Use secure token storage (sessionStorage, auto-expires)
+                    setSecureToken('demo-token-' + Date.now(), 86400); // 24h expiry
+                    
+                    // Store user data
+                    sessionStorage.setItem('currentUser', JSON.stringify(demoUser));
+                    
+                    console.log('✅ Demo login successful, redirecting...');
+                    
+                    setTimeout(() => {
+                        secureRedirect('index.html');
+                    }, 500);
+                    
+                    return;
+                }
+
+                // PRODUCTION: Real backend authentication
+                console.log('🔐 Authenticating with backend...');
+                
+                const headers = await addCSRFHeader({
+                    'Content-Type': 'application/json'
+                });
+                
+                const response = await fetch(`${CONFIG.API_BASE}/api/auth/login`, {
+                    method: 'POST',
+                    headers: headers,
+                    credentials: 'include',
+                    body: JSON.stringify({
+                        username: companyId,
+                        password: password
+                    })
+                });
+
+                if (!response.ok) {
+                    const error = await response.json().catch(() => ({
+                        detail: 'Identifiants incorrects'
+                    }));
+                    throw new Error(error.detail);
+                }
+
+                const data = await response.json();
+                console.log('✅ Authentication successful');
+                
+                // Store token securely (auto-expires)
+                setSecureToken(data.access_token, data.expires_in || 86400);
+                
+                // Store user data
+                sessionStorage.setItem('currentUser', JSON.stringify(data.user));
+                
+                console.log('✅ Redirecting to dashboard...');
+                
+                setTimeout(() => {
+                    secureRedirect('index.html');
+                }, 500);
+
+            } catch (error) {
+                console.error('❌ Login failed:', error);
+                
+                const passwordError = document.getElementById('passwordError');
+                passwordError.textContent = error.message || 'Erreur de connexion. Veuillez réessayer.';
+                passwordError.classList.add('show');
+                
+                document.getElementById('loginPassword').classList.add('error');
+                
+                form.classList.remove('loading');
+                button.disabled = false;
+            }
+        }
+
+        // =====================================================
+        // INITIALIZATION
+        // =====================================================
+
+        // Check if already logged in
+        if (isAuthenticated()) {
+            console.log('✅ Already authenticated, redirecting...');
+            secureRedirect('index.html');
+        }
+
+        // Attach form handler
+        const form = document.getElementById('loginForm');
+        if (form) {
+            form.addEventListener('submit', handleLogin);
+            console.log('✅ Login form ready');
+        } else {
+            console.error('❌ Login form not found');
+        }
+
+        // Auto-focus username field
+        document.getElementById('loginCompanyId').focus();
+
+        console.log('✅ Login page initialized');
+    </script>
+</body>
+</html>

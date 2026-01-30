@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NUMMA - FEC Manager</title>
+    <link rel="stylesheet" href="styles/main.css">
+    <style>
+        .fec-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .fec-stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .fec-stat-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .fec-stat-label {
+            font-size: 0.875rem;
+            color: var(--text-gray);
+            margin-bottom: 0.5rem;
+        }
+
+        .fec-stat-value {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: var(--text-dark);
+        }
+
+        .fec-actions {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .validation-results {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+            margin-bottom: 2rem;
+            display: none;
+        }
+
+        .validation-results.show {
+            display: block;
+        }
+
+        .validation-error {
+            padding: 0.75rem;
+            background: #fee2e2;
+            border-left: 3px solid #ef4444;
+            border-radius: 4px;
+            margin-bottom: 0.5rem;
+        }
+
+        .validation-warning {
+            padding: 0.75rem;
+            background: #fef3c7;
+            border-left: 3px solid #f59e0b;
+            border-radius: 4px;
+            margin-bottom: 0.5rem;
+        }
+
+        .validation-success {
+            padding: 0.75rem;
+            background: #d1fae5;
+            border-left: 3px solid #10b981;
+            border-radius: 4px;
+        }
+
+        .fec-table-container {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            overflow-x: auto;
+        }
+
+        .fec-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.875rem;
+        }
+
+        .fec-table th {
+            text-align: left;
+            padding: 0.75rem 0.5rem;
+            border-bottom: 2px solid var(--border);
+            font-weight: 600;
+            color: var(--text-gray);
+            white-space: nowrap;
+        }
+
+        .fec-table td {
+            padding: 0.75rem 0.5rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .fec-table tr:hover {
+            background: var(--bg-light);
+        }
+
+        .validated {
+            color: var(--success);
+            font-weight: 600;
+        }
+
+        .not-validated {
+            color: var(--text-gray);
+        }
+
+        .amount-cell {
+            text-align: right;
+            font-family: 'Courier New', monospace;
+        }
+
+        .encoding-notice {
+            background: #fef3c7;
+            border: 1px solid #f59e0b;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 2rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="fec-container">
+        <!-- Header -->
+        <div class="card">
+            <div class="card-header">
+                <div class="card-title">📊 Gestion FEC (Fichier des Écritures Comptables)</div>
+                <button class="btn btn-outline" onclick="window.location.href='index.html'">
+                    ← Retour au tableau de bord
+                </button>
+            </div>
+        </div>
+
+        <!-- ISO-8859-1 Encoding Notice -->
+        <div class="encoding-notice">
+            <strong>⚠️ Important - Encodage ISO-8859-1</strong><br>
+            Les fichiers FEC doivent être encodés en ISO-8859-1 pour être acceptés par l'administration fiscale.
+            Le téléchargement depuis le navigateur utilise UTF-8. Vous devrez convertir le fichier avec un outil comme
+            <code>iconv</code> avant soumission officielle.
+        </div>
+
+        <!-- Stats -->
+        <div class="fec-stats">
+            <div class="fec-stat-card">
+                <div class="fec-stat-label">Écritures totales</div>
+                <div class="fec-stat-value" id="statTotalEntries">0</div>
+            </div>
+            <div class="fec-stat-card">
+                <div class="fec-stat-label">Écritures validées</div>
+                <div class="fec-stat-value" id="statValidatedEntries">0</div>
+            </div>
+            <div class="fec-stat-card">
+                <div class="fec-stat-label">Total débit</div>
+                <div class="fec-stat-value" id="statTotalDebit">€ 0.00</div>
+            </div>
+            <div class="fec-stat-card">
+                <div class="fec-stat-label">Total crédit</div>
+                <div class="fec-stat-value" id="statTotalCredit">€ 0.00</div>
+            </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="fec-actions">
+            <button class="btn btn-primary" onclick="generateFEC()">
+                📥 Générer FEC
+            </button>
+            <button class="btn btn-outline" onclick="validateAllEntries()">
+                ✓ Valider les écritures
+            </button>
+            <button class="btn btn-outline" onclick="importFEC()">
+                📁 Importer FEC
+            </button>
+            <button class="btn btn-outline" onclick="exportToExcel()">
+                📊 Exporter Excel
+            </button>
+        </div>
+
+        <!-- Validation Results -->
+        <div class="validation-results" id="validationResults">
+            <h3>Résultats de validation</h3>
+            <div id="validationContent"></div>
+        </div>
+
+        <!-- FEC Entries Table -->
+        <div class="fec-table-container">
+            <div class="card-header" style="padding: 0 0 1rem 0;">
+                <div class="card-title">Écritures comptables</div>
+                <input type="text" 
+                       id="fecSearchInput" 
+                       placeholder="Rechercher dans les écritures..." 
+                       class="form-input" 
+                       style="width: 300px;"
+                       onkeyup="filterFECEntries()">
+            </div>
+
+            <table class="fec-table">
+                <thead>
+                    <tr>
+                        <th>JournalCode</th>
+                        <th>EcritureNum</th>
+                        <th>EcritureDate</th>
+                        <th>CompteNum</th>
+                        <th>CompteLib</th>
+                        <th>PieceRef</th>
+                        <th>EcritureLib</th>
+                        <th>Débit</th>
+                        <th>Crédit</th>
+                        <th>ValidDate</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="fecEntriesTableBody">
+                    <tr>
+                        <td colspan="11" style="text-align: center; padding: 2rem;">
+                            Chargement des écritures...
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Hidden file input for import -->
+    <input type="file" id="fecImportInput" accept=".txt,.csv,.fec" style="display: none;" onchange="handleFECImport(event)">
+
+    <!-- Load Dependencies -->
+    <script src="utils/security.js"></script>
+    <script src="utils/table-helpers.js"></script>
+    <script src="numma-messages.js"></script>
+    <script src="fec-module.js"></script>
+
+    <script>
+        console.log('📊 FEC Manager loaded');
+
+        // =====================================================
+        // CONFIGURATION
+        // =====================================================
+
+        const FEC_CONFIG = {
+            API_BASE: 'https://optimis-fiscale-production.up.railway.app',
+            VALIDATION_RULES: {
+                REQUIRED_FIELDS: [
+                    'JournalCode', 'EcritureNum', 'EcritureDate',
+                    'CompteNum', 'CompteLib', 'Debit', 'Credit'
+                ],
+                DATE_FORMAT: /^\d{8}$/,  // YYYYMMDD
+                ACCOUNT_FORMAT: /^\d{6,}$/,  // Min 6 digits
+                MAX_DEBIT_CREDIT: 9999999999.99
+            }
+        };
+
+        let allFECEntries = [];
+
+        // =====================================================
+        // DATA LOADING
+        // =====================================================
+
+        async function loadFECEntries() {
+            console.log('Loading FEC entries...');
+            
+            try {
+                const token = getSecureToken();
+                const response = await fetch(`${FEC_CONFIG.API_BASE}/api/fec/entries`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    credentials: 'include'
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+
+                const data = await response.json();
+                allFECEntries = data.entries || [];
+                
+                displayFECEntries(allFECEntries);
+                updateFECStats(allFECEntries);
+                
+                console.log('✅ FEC entries loaded:', allFECEntries.length);
+                
+            } catch (error) {
+                console.error('Failed to load FEC entries:', error);
+                
+                // Try loading from localStorage as fallback
+                const cached = localStorage.getItem('numma_fec_entries');
+                if (cached) {
+                    try {
+                        allFECEntries = JSON.parse(cached);
+                        displayFECEntries(allFECEntries);
+                        updateFECStats(allFECEntries);
+                        showWarning('Données FEC chargées depuis le cache local');
+                    } catch (e) {
+                        showError('Impossible de charger les écritures FEC');
+                    }
+                } else {
+                    showError('Impossible de charger les écritures FEC');
+                    document.getElementById('fecEntriesTableBody').innerHTML = `
+                        <tr>
+                            <td colspan="11" style="text-align: center; padding: 2rem;">
+                                <span style="color: var(--danger);">Erreur de chargement</span><br>
+                                <button class="btn btn-outline" onclick="loadFECEntries()" style="margin-top: 1rem;">
+                                    Réessayer
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                }
+            }
+        }
+
+        // =====================================================
+        // DISPLAY FUNCTIONS
+        // =====================================================
+
+        function displayFECEntries(entries) {
+            const tbody = document.getElementById('fecEntriesTableBody');
+            if (!tbody) return;
+
+            if (entries.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="11" style="text-align: center; padding: 2rem; color: var(--text-gray);">
+                            Aucune écriture comptable
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            // Use safe table rendering with XSS protection
+            tbody.innerHTML = entries.map(entry => {
+                const isValidated = entry.ValidDate && entry.ValidDate.trim() !== '';
+                
+                return `
+                    <tr>
+                        <td>${escapeHtml(entry.JournalCode || '')}</td>
+                        <td><strong>${escapeHtml(entry.EcritureNum || '')}</strong></td>
+                        <td>${formatFECDate(entry.EcritureDate)}</td>
+                        <td>${escapeHtml(entry.CompteNum || '')}</td>
+                        <td>${escapeHtml(entry.CompteLib || '')}</td>
+                        <td>${escapeHtml(entry.PieceRef || '')}</td>
+                        <td>${escapeHtml(entry.EcritureLib || '')}</td>
+                        <td class="amount-cell">${formatFECAmount(entry.Debit)}</td>
+                        <td class="amount-cell">${formatFECAmount(entry.Credit)}</td>
+                        <td>
+                            ${isValidated 
+                                ? `<span class="validated">✓ ${formatFECDate(entry.ValidDate)}</span>` 
+                                : '<span class="not-validated">⏳ Brouillon</span>'}
+                        </td>
+                        <td>
+                            ${isValidated 
+                                ? '<span style="color: #999;">Intangible</span>'
+                                : createButton('🗑️', `deleteEntry('${escapeHtml(entry.EcritureNum)}')`, 'btn btn-danger')}
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function updateFECStats(entries) {
+            const totalEntries = entries.length;
+            const validatedEntries = entries.filter(e => e.ValidDate && e.ValidDate.trim() !== '').length;
+            const totalDebit = entries.reduce((sum, e) => sum + parseFloat(e.Debit || 0), 0);
+            const totalCredit = entries.reduce((sum, e) => sum + parseFloat(e.Credit || 0), 0);
+
+            document.getElementById('statTotalEntries').textContent = totalEntries;
+            document.getElementById('statValidatedEntries').textContent = validatedEntries;
+            document.getElementById('statTotalDebit').textContent = formatCurrency(totalDebit);
+            document.getElementById('statTotalCredit').textContent = formatCurrency(totalCredit);
+        }
+
+        // =====================================================
+        // FILTERING
+        // =====================================================
+
+        function filterFECEntries() {
+            const searchTerm = document.getElementById('fecSearchInput').value.toLowerCase();
+            
+            if (!searchTerm) {
+                displayFECEntries(allFECEntries);
+                return;
+            }
+
+            const filtered = allFECEntries.filter(entry => 
+                (entry.EcritureNum || '').toLowerCase().includes(searchTerm) ||
+                (entry.CompteNum || '').toLowerCase().includes(searchTerm) ||
+                (entry.CompteLib || '').toLowerCase().includes(searchTerm) ||
+                (entry.EcritureLib || '').toLowerCase().includes(searchTerm) ||
+                (entry.PieceRef || '').toLowerCase().includes(searchTerm)
+            );
+
+            displayFECEntries(filtered);
+        }
+
+        // =====================================================
+        // VALIDATION
+        // =====================================================
+
+        async function validateAllEntries() {
+            console.log('Validating all FEC entries...');
+            showInfo('Validation en cours...');
+
+            const results = await window.FECModule.validateFECCompliance(allFECEntries);
+            
+            displayValidationResults(results);
+
+            if (results.valid) {
+                showSuccess('Toutes les écritures sont conformes au FEC');
+            } else {
+                showError(`${results.errors.length} erreur(s) détectée(s)`);
+            }
+        }
+
+        function displayValidationResults(results) {
+            const container = document.getElementById('validationResults');
+            const content = document.getElementById('validationContent');
+            
+            container.classList.add('show');
+
+            if (results.valid) {
+                content.innerHTML = `
+                    <div class="validation-success">
+                        ✓ Toutes les écritures sont conformes au format FEC
+                    </div>
+                `;
+                return;
+            }
+
+            let html = '';
+
+            // Errors
+            if (results.errors && results.errors.length > 0) {
+                html += '<h4>Erreurs bloquantes:</h4>';
+                results.errors.forEach(error => {
+                    html += `
+                        <div class="validation-error">
+                            <strong>${escapeHtml(error.type)}</strong>: ${escapeHtml(error.message)}
+                            ${error.entry ? `<br><small>Écriture: ${escapeHtml(error.entry)}</small>` : ''}
+                        </div>
+                    `;
+                });
+            }
+
+            // Warnings
+            if (results.warnings && results.warnings.length > 0) {
+                html += '<h4 style="margin-top: 1rem;">Avertissements:</h4>';
+                results.warnings.forEach(warning => {
+                    html += `
+                        <div class="validation-warning">
+                            <strong>${escapeHtml(warning.type)}</strong>: ${escapeHtml(warning.message)}
+                        </div>
+                    `;
+                });
+            }
+
+            content.innerHTML = html;
+        }
+
+        // =====================================================
+        // ACTIONS
+        // =====================================================
+
+        async function generateFEC() {
+            console.log('Generating FEC file...');
+            
+            if (allFECEntries.length === 0) {
+                showError('Aucune écriture à exporter');
+                return;
+            }
+
+            // Validate first
+            const validation = await window.FECModule.validateFECCompliance(allFECEntries);
+            if (!validation.valid) {
+                if (!confirm(`Le FEC contient ${validation.errors.length} erreur(s). Continuer quand même ?`)) {
+                    return;
+                }
+            }
+
+            showInfo('Génération du FEC en cours...');
+
+            try {
+                const fecContent = window.FECModule.generateFECFile(allFECEntries);
+                
+                // Create blob with explicit charset (Note: Browsers save as UTF-8)
+                const blob = new Blob([fecContent], { 
+                    type: 'text/plain;charset=ISO-8859-1'
+                });
+                
+                // Download
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `FEC_${new Date().toISOString().slice(0,10).replace(/-/g, '')}.txt`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                
+                showSuccess('FEC généré avec succès. N\'oubliez pas de convertir en ISO-8859-1 avant soumission officielle.');
+                
+            } catch (error) {
+                console.error('FEC generation failed:', error);
+                showError('Erreur lors de la génération: ' + error.message);
+            }
+        }
+
+        function importFEC() {
+            document.getElementById('fecImportInput').click();
+        }
+
+        async function handleFECImport(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            showInfo('Import en cours...');
+
+            try {
+                const content = await file.text();
+                const entries = window.FECModule.parseFECFile(content);
+                
+                allFECEntries = entries;
+                displayFECEntries(allFECEntries);
+                updateFECStats(allFECEntries);
+                
+                // Save to backend
+                const token = getSecureToken();
+                await fetch(`${FEC_CONFIG.API_BASE}/api/fec/import`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ entries }),
+                    credentials: 'include'
+                });
+                
+                showSuccess(`${entries.length} écritures importées`);
+                
+            } catch (error) {
+                console.error('Import failed:', error);
+                showError('Erreur d\'import: ' + error.message);
+            }
+
+            // Reset input
+            event.target.value = '';
+        }
+
+        async function exportToExcel() {
+            showInfo('Export Excel en cours...');
+            
+            try {
+                const token = getSecureToken();
+                const response = await fetch(`${FEC_CONFIG.API_BASE}/api/fec/export/excel`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ entries: allFECEntries }),
+                    credentials: 'include'
+                });
+
+                if (!response.ok) throw new Error('Export failed');
+
+                const blob = await response.blob();
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `FEC_Export_${new Date().toISOString().slice(0,10)}.xlsx`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+
+                showSuccess('Export Excel réussi');
+                
+            } catch (error) {
+                console.error('Excel export failed:', error);
+                showError('Erreur d\'export Excel');
+            }
+        }
+
+        async function deleteEntry(ecritureNum) {
+            if (!confirm(`Supprimer l'écriture ${ecritureNum} ?`)) {
+                return;
+            }
+
+            try {
+                const token = getSecureToken();
+                const response = await fetch(`${FEC_CONFIG.API_BASE}/api/fec/entry/${encodeURIComponent(ecritureNum)}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        ...(await addCSRFHeader({}))
+                    },
+                    credentials: 'include'
+                });
+
+                if (!response.ok) throw new Error('Delete failed');
+
+                // Remove from local array
+                allFECEntries = allFECEntries.filter(e => e.EcritureNum !== ecritureNum);
+                displayFECEntries(allFECEntries);
+                updateFECStats(allFECEntries);
+
+                showSuccess('Écriture supprimée');
+
+            } catch (error) {
+                console.error('Delete failed:', error);
+                showError('Erreur de suppression');
+            }
+        }
+
+        // =====================================================
+        // FORMATTING HELPERS
+        // =====================================================
+
+        function formatFECAmount(amount) {
+            const num = parseFloat(amount || 0);
+            return num.toFixed(2).replace('.', ',');
+        }
+
+        // =====================================================
+        // INITIALIZATION
+        // =====================================================
+
+        // Load entries on page load
+        loadFECEntries();
+
+        console.log('✅ FEC Manager initialized');
+    </script>
+</body>
+</html>
