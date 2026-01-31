@@ -1,0 +1,123 @@
+<!-- Alertes View -->
+<div class="alertes-container">
+    <div class="card">
+        <div class="card-header">
+            <div class="card-title">🔔 Centre d'alertes</div>
+            <button class="btn btn-outline" onclick="markAllAsRead()">
+                ✓ Tout marquer comme lu
+            </button>
+        </div>
+    </div>
+
+    <!-- Alert Categories -->
+    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 1.5rem;">
+        <button class="btn ${activeFilter === 'all' ? 'btn-primary' : 'btn-outline'}" onclick="filterAlerts('all')">
+            Toutes (<span id="countAll">0</span>)
+        </button>
+        <button class="btn ${activeFilter === 'urgent' ? 'btn-primary' : 'btn-outline'}" onclick="filterAlerts('urgent')">
+            Urgentes (<span id="countUrgent">0</span>)
+        </button>
+        <button class="btn ${activeFilter === 'read' ? 'btn-primary' : 'btn-outline'}" onclick="filterAlerts('read')">
+            Lues (<span id="countRead">0</span>)
+        </button>
+    </div>
+
+    <!-- Alerts List -->
+    <div id="alertsList"></div>
+</div>
+
+<script>
+console.log('🔔 Alertes view loaded');
+
+let alerts = [];
+let activeFilter = 'all';
+
+async function loadAlerts() {
+    try {
+        const token = getSecureToken();
+        const response = await fetch('https://optimis-fiscale-production.up.railway.app/api/alerts', {
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            credentials: 'include'
+        });
+
+        if (response.ok) {
+            alerts = await response.json();
+            displayAlerts();
+        }
+    } catch (error) {
+        console.error('Alerts loading failed:', error);
+    }
+}
+
+function displayAlerts() {
+    const container = document.getElementById('alertsList');
+    
+    let filtered = alerts;
+    if (activeFilter === 'urgent') {
+        filtered = alerts.filter(a => a.priority === 'urgent');
+    } else if (activeFilter === 'read') {
+        filtered = alerts.filter(a => a.read);
+    }
+    
+    document.getElementById('countAll').textContent = alerts.length;
+    document.getElementById('countUrgent').textContent = alerts.filter(a => a.priority === 'urgent').length;
+    document.getElementById('countRead').textContent = alerts.filter(a => a.read).length;
+    
+    if (filtered.length === 0) {
+        container.innerHTML = `
+            <div class="card" style="text-align: center; padding: 3rem;">
+                <div style="font-size: 3rem; margin-bottom: 1rem;">✅</div>
+                <h3>Aucune alerte</h3>
+                <p style="color: var(--text-gray);">Vous êtes à jour!</p>
+            </div>
+        `;
+        return;
+    }
+    
+    container.innerHTML = filtered.map(alert => `
+        <div class="card" style="border-left: 4px solid ${alert.priority === 'urgent' ? 'var(--danger)' : 'var(--warning)'}; ${alert.read ? 'opacity: 0.6;' : ''}">
+            <div style="display: flex; justify-content: space-between; align-items: start;">
+                <div style="flex: 1;">
+                    <h3>${escapeHtml(alert.title)}</h3>
+                    <p style="color: var(--text-gray); margin-top: 0.5rem;">
+                        ${escapeHtml(alert.message)}
+                    </p>
+                    <small style="color: var(--text-gray);">
+                        ${formatDate(alert.created_at)}
+                    </small>
+                </div>
+                ${!alert.read ? `
+                    <button class="btn btn-outline" onclick="markAsRead('${alert.id}')">
+                        ✓ Marquer comme lu
+                    </button>
+                ` : ''}
+            </div>
+        </div>
+    `).join('');
+}
+
+function filterAlerts(filter) {
+    activeFilter = filter;
+    displayAlerts();
+}
+
+function markAsRead(id) {
+    const alert = alerts.find(a => a.id === id);
+    if (alert) {
+        alert.read = true;
+        displayAlerts();
+        showSuccess('Alerte marquée comme lue');
+    }
+}
+
+function markAllAsRead() {
+    alerts.forEach(a => a.read = true);
+    displayAlerts();
+    showSuccess('Toutes les alertes marquées comme lues');
+}
+
+loadAlerts();
+</script>

@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NUMMA - Dashboard</title>
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    
+    <!-- Shared Styles -->
+    <link rel="stylesheet" href="styles/main.css">
+</head>
+<body>
+    <div class="app-container" id="appContainer">
+        <!-- Sidebar Component -->
+        <div id="sidebarContainer"></div>
+
+        <!-- Main Content Area -->
+        <div class="main-content">
+            <!-- Top Bar Component -->
+            <div id="topBarContainer"></div>
+
+            <!-- Dynamic View Container -->
+            <div class="content-area" id="viewContainer">
+                <div class="loading-spinner">
+                    <div class="spinner"></div>
+                    <p>Chargement...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modals Container -->
+    <div id="modalsContainer"></div>
+
+    <!-- ================================================ -->
+    <!-- CRITICAL: Load in correct order -->
+    <!-- ================================================ -->
+    
+    <!-- 1. Security utilities (MUST BE FIRST) -->
+    <script src="utils/security.js"></script>
+    
+    <!-- 2. Table helpers -->
+    <script src="utils/table-helpers.js"></script>
+    
+    <!-- 3. Message system -->
+    <script src="modules/numma-messages.js"></script>
+    
+    <!-- 4. API Modules (Already refactored) -->
+    <script src="modules/numma-invoices.js"></script>
+    <script src="modules/numma-employees.js"></script>
+    <script src="modules/numma-pointages.js"></script>
+    <script src="modules/numma-exports.js"></script>
+    <script src="modules/fec-module.js"></script>
+    
+    <!-- 5. Import & Loader (Batch 3) -->
+    <script src="modules/numma-imports.js"></script>
+    <script src="modules/numma-loader.js"></script>
+    
+    <!-- 6. Interactive & Quick Actions (Batch 4) -->
+    <script src="modules/numma-interactive-complete.js"></script>
+    <script src="modules/quick-actions.js"></script>
+    
+    <!-- 7. Main application (loads last) -->
+    <script src="app/main.js"></script>
+</body>
+</html>
